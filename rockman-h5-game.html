@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洛克人 H5 遊戲 - 特殊能力</title>
+    <style>
+        body {
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid white;
+        }
+        #gameOver {
+            position: absolute;
+            color: white;
+            font-size: 48px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="gameOver">遊戲結束</div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverDisplay = document.getElementById('gameOver');
+
+        // 玩家角色
+        const player = {
+            x: 50,
+            y: 200,
+            width: 50,
+            height: 50,
+            speed: 5,
+            jumpForce: 10,
+            gravity: 0.5,
+            isJumping: false,
+            velocityY: 0,
+            direction: 1, // 1 表示向右，-1 表示向左
+            health: 100,
+            maxHealth: 100,
+            invincibleTime: 0,
+            dashCooldown: 0,
+            dashDuration: 0,
+            shieldCooldown: 0,
+            shieldDuration: 0
+        };
+
+        // 能量彈陣列
+        let bullets = [];
+
+        // 敵人陣列
+        let enemies = [];
+
+        // 遊戲狀態
+        let gameOver = false;
+
+        // 遊戲循環
+        function gameLoop() {
+            if (gameOver) {
+                gameOverDisplay.style.display = 'block';
+                return;
+            }
+
+            // 清除畫布
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 更新玩家位置
+            updatePlayer();
+
+            // 更新能量彈
+            updateBullets();
+
+            // 更新敵人
+            updateEnemies();
+
+            // 檢測碰撞
+            checkCollisions();
+
+            // 繪製玩家
+            drawPlayer();
+
+            // 繪製能量彈
+            drawBullets();
+
+            // 繪製敵人
+            drawEnemies();
+
+            // 繪製玩家生命值
+            drawPlayerHealth();
+
+            // 繪製特殊能力冷卻時間
+            drawCooldowns();
+
+            // 繼續遊戲循環
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 更新玩家位置
+        function updatePlayer() {
+            // 應用重力（如果不在衝刺中）
+            if (player.dashDuration === 0) {
+                player.velocityY += player.gravity;
+                player.y += player.velocityY;
+            }
+
+            // 防止玩家掉出畫面底部
+            if (player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.isJumping = false;
+                player.velocityY = 0;
+            }
+
+            // 更新無敵時間
+            if (player.invincibleTime > 0) {
+                player.invincibleTime--;
+            }
+
+            // 更新衝刺
+            if (player.dashDuration > 0) {
+                player.dashDuration--;
+                player.x += player.speed * 3 * player.direction;
+            }
+            if (player.dashCooldown > 0) {
+                player.dashCooldown--;
+            }
+
+            // 更新護盾
+            if (player.shieldDuration > 0) {
+                player.shieldDuration--;
+            }
+            if (player.shieldCooldown > 0) {
+                player.shieldCooldown--;
+            }
+        }
+
+        // 更新能量彈
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].x += bullets[i].speed;
+
+                // 如果能量彈離開畫面，將其移除
+                if (bullets[i].x > canvas.width || bullets[i].x < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // 更新敵人
+        function updateEnemies() {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].x += enemies[i].speed;
+
+                // 如果敵人離開畫面，將其移除
+                if (enemies[i].x < 0 || enemies[i].x > canvas.width) {
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+
+        // 檢測碰撞
+        function checkCollisions() {
+            // 子彈和敵人的碰撞
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    if (isColliding(bullets[i], enemies[j])) {
+                        // 敵人受到傷害
+                        enemies[j].health -= bullets[i].damage;
+                        // 移除子彈
+                        bullets.splice(i, 1);
+                        // 如果敵人健康值小於等於0，移除敵人
+                        if (enemies[j].health <= 0) {
+                            enemies.splice(j, 1);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 玩家和敵人的碰撞
+            if (player.invincibleTime === 0 && player.shieldDuration === 0) {
+                for (let enemy of enemies) {
+                    if (isColliding(player, enemy)) {
+                        player.health -= 10;
+                        player.invincibleTime = 60; // 1秒無敵時間 (假設遊戲運行在60FPS)
+                        if (player.health <= 0) {
+                            gameOver = true;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 碰撞檢測函數
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 繪製玩家
+        function drawPlayer() {
+            if (player.invincibleTime % 10 < 5 || player.shieldDuration > 0) { // 無敵時或護盾時閃爍效果
+                ctx.fillStyle = player.shieldDuration > 0 ? 'cyan' : 'blue';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+        }
+
+        // 繪製能量彈
+        function drawBullets() {
+            ctx.fillStyle = 'yellow';
+            for (let bullet of bullets) {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 繪製敵人
+        function drawEnemies() {
+            for (let enemy of enemies) {
+                // 根據敵人的健康值改變顏色
+                const healthPercentage = enemy.health / enemy.maxHealth;
+                const red = Math.floor(255 * (1 - healthPercentage));
+                const green = Math.floor(255 * healthPercentage);
+                ctx.fillStyle = `rgb(${red}, ${green}, 0)`;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            }
+        }
+
+        // 繪製玩家生命值
+        function drawPlayerHealth() {
+            const healthPercentage = player.health / player.maxHealth;
+            ctx.fillStyle = `rgb(${Math.floor(255 * (1 - healthPercentage))}, ${Math.floor(255 * healthPercentage)}, 0)`;
+            ctx.fillRect(10, 10, 200 * healthPercentage, 20);
+            ctx.strokeStyle = 'white';
+            ctx.strokeRect(10, 10, 200, 20);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText(`生命值: ${player.health}/${player.maxHealth}`, 220, 26);
+        }
+
+        // 繪製特殊能力冷卻時間
+        function drawCooldowns() {
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText(`衝刺冷卻: ${Math.max(0, player.dashCooldown)}`, 10, 50);
+            ctx.fillText(`護盾冷卻: ${Math.max(0, player.shieldCooldown)}`, 10, 70);
+        }
+
+        // 發射能量彈
+        function shootBullet() {
+            let bullet = {
+                x: player.x + player.width / 2,
+                y: player.y + player.height / 2,
+                width: 10,
+                height: 10,
+                radius: 5,
+                speed: 10 * player.direction,
+                damage: 20
+            };
+            bullets.push(bullet);
+        }
+
+        // 生成敵人
+        function spawnEnemy() {
+            let enemy = {
+                x: Math.random() < 0.5 ? 0 : canvas.width,
+                y: canvas.height - 50, // 放置在地面上
+                width: 30,
+                height: 50,
+                speed: Math.random() < 0.5 ? 2 : -2,
+                health: 100,
+                maxHealth: 100
+            };
+            enemies.push(enemy);
+        }
+
+        // 使用衝刺能力
+        function useDash() {
+            if (player.dashCooldown === 0 && player.dashDuration === 0) {
+                player.dashDuration = 10; // 衝刺持續10幀
+                player.dashCooldown = 120; // 2秒冷卻時間
+            }
+        }
+
+        // 使用護盾能力
+        function useShield() {
+            if (player.shieldCooldown === 0 && player.shieldDuration === 0) {
+                player.shieldDuration = 180; // 護盾持續3秒
+                player.shieldCooldown = 300; // 5秒冷卻時間
+            }
+        }
+
+        // 每隔一段時間生成敵人
+        setInterval(spawnEnemy, 3000);
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            if (gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft':
+                    player.x -= player.speed;
+                    player.direction = -1;
+                    break;
+                case 'ArrowRight':
+                    player.x += player.speed;
+                    player.direction = 1;
+                    break;
+                case 'ArrowUp':
+                    if (!player.isJumping) {
+                        player.velocityY = -player.jumpForce;
+                        player.isJumping = true;
+                    }
+                    break;
+                case ' ': // 空格鍵發射能量彈
+                    shootBullet();
+                    break;
+                case 'z': // Z鍵使用衝刺
+                    useDash();
+                    break;
+                case 'x': // X鍵使用護盾
+                    useShield();
+                    break;
+            }
+        });
+
+        // 開始遊戲
+        gameLoop();
+    </script>
+</body>
+</html>
