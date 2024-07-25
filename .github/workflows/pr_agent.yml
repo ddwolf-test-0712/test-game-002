@@ -5,8 +5,7 @@ on:
 jobs:
   pr_agent_job:
     if: ${{ github.event.sender.type != 'Bot' }}
-    runs-on: 
-      group: ddwolf-pr-test
+    runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
