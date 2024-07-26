@@ -1,4 +1,12 @@
 [pr_reviewer]
 extra_instructions="""\
-使用繁體中文回答
+- all content answer in chinese(zh-tw)  
+"""
+[pr_description]
+extra_instructions="""\
+- all content answer in chinese(zh-tw)  
+"""
+[pr_code_suggestions]
+extra_instructions="""\
+- all content answer in chinese(zh-tw)  
 """
