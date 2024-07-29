@@ -14,7 +14,8 @@ jobs:
     steps:
       - name: PR Agent action step
         id: pragent
-        uses: ddwolf-test-0712/pr-agent@main
+        uses: Codium-ai/pr-agent@main
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          anthropic.key: ${{ secrets.ANTHROPIC_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
