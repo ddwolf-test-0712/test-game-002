@@ -17,4 +17,5 @@ jobs:
         uses: ddwolf-test-0712/pr-agent@main
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
