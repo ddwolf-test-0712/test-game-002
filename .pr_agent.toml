@@ -1,3 +1,8 @@
+[config]
+model="anthropic/claude-3-5-sonnet-202406209"
+model_turbo="anthropic/claude-3-5-sonnet-20240620"
+fallback_models=["anthropic/claude-3-5-sonnet-20240620"]
+
 [pr_reviewer]
 extra_instructions="""\
 - all content answer in chinese(zh-tw)  
